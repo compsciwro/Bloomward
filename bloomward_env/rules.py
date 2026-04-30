@@ -1,0 +1,284 @@
+# ============================================================
+# bloomward_env/rules.py
+#
+# Game rule functions:
+#   - Triangle combo detection (with duplicate prevention)
+#   - Spirit activation and effects
+#   - Corruption spread
+#   - Season helpers
+#   - Win / loss / truncation checks
+# ============================================================
+
+from .board import HexBoard
+from .constants import (
+    TILE_FERTILE,
+    FLOWER_SUNFLOWER, FLOWER_TULIP, FLOWER_BLOSSOM,
+    SPIRIT_NAMES,
+    SEASON_SPREAD_RATE, TURNS_PER_SEASON,
+)
+
+
+# ============================================================
+# 1. Triangle combo detection
+# ============================================================
+
+def _all_triangles(board: HexBoard):
+    """
+    Generate every unique unit-triangle (triplet of tiles that
+    are mutually adjacent) on the board.
+
+    Strategy: for each tile, check every pair of its neighbours.
+    Two neighbours form a triangle with the pivot tile if they
+    are also neighbours of each other.  Deduplicate via frozenset.
+    """
+    seen = set()
+    for tile in board.tiles:
+        nbrs = board.get_neighbours_of(tile.q, tile.r)
+        nbr_coords = {(n.q, n.r) for n in nbrs}
+
+        for i in range(len(nbrs)):
+            for j in range(i + 1, len(nbrs)):
+                a, b = nbrs[i], nbrs[j]
+                # a and b must also be neighbours of each other
+                if (a.q, a.r) in {(n.q, n.r)
+                                   for n in board.get_neighbours_of(b.q, b.r)}:
+                    key = frozenset([(tile.q, tile.r),
+                                     (a.q, a.r),
+                                     (b.q, b.r)])
+                    if key not in seen:
+                        seen.add(key)
+                        yield (tile, a, b)
+
+
+def detect_combos(board: HexBoard,
+                  last_placed_coord=None,
+                  activated_combos: set = None):
+    """
+    Scan the board for new triangle combos: three tiles of the
+    same flower type that are mutually adjacent.
+
+    Parameters
+    ----------
+    board              : HexBoard
+    last_placed_coord  : (q, r) of the most recently placed flower.
+                         If given, only triangles containing that
+                         tile are checked (faster).
+    activated_combos   : set of frozenset keys already activated.
+                         Used to prevent double-counting the same
+                         triangle across multiple turns.
+
+    Returns
+    -------
+    List of combo dicts:
+        { "flower": int, "tiles": [Tile, Tile, Tile], "key": frozenset }
+    """
+    if activated_combos is None:
+        activated_combos = set()
+
+    combos   = []
+    checked  = set()
+
+    for tile_a, tile_b, tile_c in _all_triangles(board):
+        key = frozenset([(tile_a.q, tile_a.r),
+                         (tile_b.q, tile_b.r),
+                         (tile_c.q, tile_c.r)])
+
+        if key in checked or key in activated_combos:
+            continue
+        checked.add(key)
+
+        # Filter to triangles containing the last placed tile
+        if last_placed_coord is not None:
+            coords = {(tile_a.q, tile_a.r),
+                      (tile_b.q, tile_b.r),
+                      (tile_c.q, tile_c.r)}
+            if last_placed_coord not in coords:
+                continue
+
+        # All three must carry the same non-None flower
+        f = tile_a.flower
+        if f is None:
+            continue
+        if tile_b.flower == f and tile_c.flower == f:
+            combos.append({
+                "flower": f,
+                "tiles":  [tile_a, tile_b, tile_c],
+                "key":    key,
+            })
+
+    return combos
+
+
+# ============================================================
+# 2. Spirit effects
+# ============================================================
+
+def activate_spirit(board: HexBoard, combo: dict, np_random):
+    """
+    Resolve a spirit activation.
+
+    Spirit of Renewal  (Sunflower) → cleanse one adjacent corrupted tile
+    Spirit of Rain     (Tulip)     → signal to skip corruption this turn
+                                     (handled in env.step via return value)
+    Spirit of Blossom  (Blossom)   → protect adjacent fertile tiles
+
+    Returns a result dict with details for the info dictionary.
+    """
+    flower      = combo["flower"]
+    spirit_name = SPIRIT_NAMES.get(flower, "Unknown Spirit")
+    result      = {"spirit": spirit_name, "flower": flower}
+
+    combo_tiles = combo["tiles"]
+
+    if flower == FLOWER_SUNFLOWER:
+        # ── Spirit of Renewal: cleanse one corrupted neighbour ──────
+        candidates = []
+        for tile in combo_tiles:
+            for nbr in board.get_neighbours_of(tile.q, tile.r):
+                if nbr.corrupted and nbr not in candidates:
+                    candidates.append(nbr)
+
+        cleansed = None
+        if candidates:
+            # Use the seeded numpy RNG for reproducibility
+            idx    = int(np_random.integers(0, len(candidates)))
+            target = candidates[idx]
+            target.corrupted  = False
+            target.tile_type  = TILE_FERTILE   # restore as fertile
+            cleansed = (target.q, target.r)
+
+        result["cleansed_tile"] = cleansed
+
+    elif flower == FLOWER_TULIP:
+        # ── Spirit of Rain: signal to skip corruption this turn ─────
+        # The actual skip logic is handled in env.step().
+        # This flag is checked there.
+        result["skip_corruption"] = True
+
+    elif flower == FLOWER_BLOSSOM:
+        # ── Spirit of Blossom: protect adjacent fertile tiles ───────
+        protected = []
+        for tile in combo_tiles:
+            for nbr in board.get_neighbours_of(tile.q, tile.r):
+                if (nbr.tile_type == TILE_FERTILE
+                        and not nbr.corrupted
+                        and not nbr.protected):
+                    nbr.protected = True
+                    protected.append((nbr.q, nbr.r))
+        result["protected_tiles"] = protected
+
+    return result
+
+
+# ============================================================
+# 3. Corruption spread
+# ============================================================
+
+def spread_corruption(board: HexBoard, n_tiles: int, np_random):
+    """
+    Spread corruption inward by up to n_tiles tiles.
+
+    Rules:
+      - Only empty, unprotected fertile tiles adjacent to a
+        corrupted tile are eligible.
+      - Cannot overwrite flowers.
+      - Cannot overwrite the Sacred Core.
+      - Protected tiles (Spirit of Blossom) are skipped and
+        their protection is consumed on contact.
+
+    Uses the seeded np_random for reproducibility.
+
+    Returns a list of (q, r) coords that became newly corrupted.
+    """
+    eligible = []
+    for tile in board.tiles:
+        if tile.tile_type != TILE_FERTILE:
+            continue
+        if tile.corrupted or tile.flower is not None:
+            continue
+        # Must be adjacent to a corrupted tile
+        has_corrupt_nbr = any(
+            n.corrupted
+            for n in board.get_neighbours_of(tile.q, tile.r)
+        )
+        if has_corrupt_nbr:
+            eligible.append(tile)
+
+    # Shuffle using the seeded RNG
+    if eligible:
+        indices = np_random.permutation(len(eligible))
+        eligible = [eligible[i] for i in indices]
+
+    newly_corrupted = []
+    spread_count    = 0
+
+    for tile in eligible:
+        if spread_count >= n_tiles:
+            break
+
+        if tile.protected:
+            # Protection consumed — tile is safe this time
+            tile.protected = False
+            continue
+
+        tile.corrupted = True
+        newly_corrupted.append((tile.q, tile.r))
+        spread_count += 1
+
+    return newly_corrupted
+
+
+# ============================================================
+# 4. Season helpers
+# ============================================================
+
+def get_season(turn: int) -> int:
+    """Return the season index (0–3) for the given turn."""
+    return (turn // TURNS_PER_SEASON) % 4
+
+
+def spread_rate_for_season(season: int) -> int:
+    """Number of tiles corruption spreads in this season."""
+    return SEASON_SPREAD_RATE[season]
+
+
+# ============================================================
+# 5. Win / loss / truncation
+# ============================================================
+
+def check_terminal(board: HexBoard, spirit_count: int,
+                   turn: int, max_turns: int):
+    """
+    Evaluate the episode terminal state.
+
+    Returns
+    -------
+    (terminated: bool, truncated: bool, reason: str)
+
+    reason values:
+      "win"                      — agent won
+      "loss_sacred_core"         — corruption reached the Sacred Core
+      "loss_no_valid_moves"      — no placeable tiles left
+      "truncated_max_turns"      — turn limit reached
+      "ongoing"                  — episode continues
+    """
+    from .constants import WIN_SPIRIT_COUNT, WIN_MAX_CORRUPT
+
+    # Loss: corruption reached the Sacred Core
+    if board.sacred_core_corrupted():
+        return True, False, "loss_sacred_core"
+
+    # Loss: no valid moves remain
+    if len(board.placeable_indices()) == 0:
+        return True, False, "loss_no_valid_moves"
+
+    # Win: enough spirits AND corruption under control
+    corrupt_count = board.count_corrupted()
+    if spirit_count >= WIN_SPIRIT_COUNT and corrupt_count <= WIN_MAX_CORRUPT:
+        return True, False, "win"
+
+    # Truncation: max turns reached
+    if turn >= max_turns:
+        return False, True, "truncated_max_turns"
+
+    return False, False, "ongoing"
