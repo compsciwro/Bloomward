@@ -45,8 +45,9 @@ def evaluate(model_or_none, n_episodes: int, seed_offset: int = 0):
         "corrupted_final":[],
     }
 
+    env = BloomwardEnv(render_mode=None)
+
     for ep in range(n_episodes):
-        env = BloomwardEnv(render_mode=None)
         obs, _ = env.reset(seed=ep + seed_offset)
 
         ep_reward   = 0.0
@@ -55,8 +56,13 @@ def evaluate(model_or_none, n_episodes: int, seed_offset: int = 0):
 
         while True:
             if model_or_none is None:
-                # Random agent
-                action = env.action_space.sample()
+                # Random agent — sample only from valid tiles to avoid
+                # infinite invalid-action loops as the board fills up
+                valid = env._board.placeable_indices()
+                if valid:
+                    action = int(env.np_random.choice(valid))
+                else:
+                    action = env.action_space.sample()
             else:
                 # Trained agent
                 action, _ = model_or_none.predict(obs, deterministic=True)
@@ -82,9 +88,11 @@ def evaluate(model_or_none, n_episodes: int, seed_offset: int = 0):
                                     "loss_no_valid_moves") else 0)
                 results["truncated"].append(
                     1 if reason == "truncated_max_turns" else 0)
+                print(f"  ep {ep+1:>3}/{n_episodes}  steps={ep_steps:>4}  "
+                      f"reward={ep_reward:+.0f}  {reason}")
                 break
 
-        env.close()
+    env.close()
 
     return results
 

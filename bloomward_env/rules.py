@@ -22,32 +22,25 @@ from .constants import (
 # 1. Triangle combo detection
 # ============================================================
 
-def _all_triangles(board: HexBoard):
+def _triangles_containing(board: HexBoard, q, r):
     """
-    Generate every unique unit-triangle (triplet of tiles that
-    are mutually adjacent) on the board.
+    Generate all unit-triangles that include tile (q, r).
 
-    Strategy: for each tile, check every pair of its neighbours.
-    Two neighbours form a triangle with the pivot tile if they
-    are also neighbours of each other.  Deduplicate via frozenset.
+    Only inspects the 6 neighbours of the pivot tile, so this is
+    O(36) instead of O(n_tiles) and avoids a full board scan.
     """
-    seen = set()
-    for tile in board.tiles:
-        nbrs = board.get_neighbours_of(tile.q, tile.r)
-        nbr_coords = {(n.q, n.r) for n in nbrs}
+    pivot = board.get_tile(q, r)
+    if pivot is None:
+        return
+    nbrs = board.get_neighbours_of(q, r)
+    nbr_set = {(n.q, n.r) for n in nbrs}
 
-        for i in range(len(nbrs)):
-            for j in range(i + 1, len(nbrs)):
-                a, b = nbrs[i], nbrs[j]
-                # a and b must also be neighbours of each other
-                if (a.q, a.r) in {(n.q, n.r)
-                                   for n in board.get_neighbours_of(b.q, b.r)}:
-                    key = frozenset([(tile.q, tile.r),
-                                     (a.q, a.r),
-                                     (b.q, b.r)])
-                    if key not in seen:
-                        seen.add(key)
-                        yield (tile, a, b)
+    for i in range(len(nbrs)):
+        for j in range(i + 1, len(nbrs)):
+            a, b = nbrs[i], nbrs[j]
+            if (a.q, a.r) in {(n.q, n.r)
+                               for n in board.get_neighbours_of(b.q, b.r)}:
+                yield (pivot, a, b)
 
 
 def detect_combos(board: HexBoard,
@@ -61,8 +54,7 @@ def detect_combos(board: HexBoard,
     ----------
     board              : HexBoard
     last_placed_coord  : (q, r) of the most recently placed flower.
-                         If given, only triangles containing that
-                         tile are checked (faster).
+                         Only triangles containing that tile are checked.
     activated_combos   : set of frozenset keys already activated.
                          Used to prevent double-counting the same
                          triangle across multiple turns.
@@ -75,10 +67,13 @@ def detect_combos(board: HexBoard,
     if activated_combos is None:
         activated_combos = set()
 
-    combos   = []
-    checked  = set()
+    if last_placed_coord is None:
+        return []
 
-    for tile_a, tile_b, tile_c in _all_triangles(board):
+    combos  = []
+    checked = set()
+
+    for tile_a, tile_b, tile_c in _triangles_containing(board, *last_placed_coord):
         key = frozenset([(tile_a.q, tile_a.r),
                          (tile_b.q, tile_b.r),
                          (tile_c.q, tile_c.r)])
@@ -86,14 +81,6 @@ def detect_combos(board: HexBoard,
         if key in checked or key in activated_combos:
             continue
         checked.add(key)
-
-        # Filter to triangles containing the last placed tile
-        if last_placed_coord is not None:
-            coords = {(tile_a.q, tile_a.r),
-                      (tile_b.q, tile_b.r),
-                      (tile_c.q, tile_c.r)}
-            if last_placed_coord not in coords:
-                continue
 
         # All three must carry the same non-None flower
         f = tile_a.flower
