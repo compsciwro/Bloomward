@@ -12,7 +12,7 @@
 
 import argparse
 import numpy as np
-from stable_baselines3 import PPO
+from sb3_contrib import MaskablePPO
 from bloomward_env.env import BloomwardEnv
 
 
@@ -65,7 +65,7 @@ def evaluate(model_or_none, n_episodes: int, seed_offset: int = 0):
                     action = env.action_space.sample()
             else:
                 # Trained agent
-                action, _ = model_or_none.predict(obs, deterministic=True)
+                action, _ = model_or_none.predict(obs, deterministic=True, action_masks=env.action_masks())
                 action    = int(action)
 
             obs, reward, terminated, truncated, info = env.step(action)
@@ -140,7 +140,7 @@ def main(n_episodes: int = 50):
     # ── Trained PPO agent ─────────────────────────────────────
     print("\nLoading trained PPO model...")
     try:
-        model = PPO.load("bloomward_ppo")
+        model = MaskablePPO.load("bloomward_ppo")
         print("Running trained agent...")
         trained_results = evaluate(model, n_episodes, seed_offset=1000)
         print_summary("Trained PPO Agent", trained_results)

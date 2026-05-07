@@ -8,7 +8,8 @@
 # Usage:  python train_agent.py
 # ============================================================
 
-from stable_baselines3 import PPO
+from sb3_contrib import MaskablePPO
+from sb3_contrib.common.wrappers import ActionMasker
 from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.common.monitor import Monitor
 from bloomward_env.env import BloomwardEnv
@@ -23,13 +24,13 @@ def main():
     check_env(env, warn=True)
     print("check_env passed!\n")
 
-    # ── 2. Wrap with Monitor to record episode statistics ─────
-    # Monitor saves reward/length data to a CSV in ./logs/
+    # ── 2. Wrap with ActionMasker then Monitor ────────────────
+    env = ActionMasker(env, lambda e: e.action_masks())
     env = Monitor(env, filename="./logs/bloomward_monitor")
 
     # ── 3. Create the PPO agent ───────────────────────────────
     # MultiInputPolicy is required for Dict observation spaces.
-    model = PPO(
+    model = MaskablePPO(
         "MultiInputPolicy",
         env,
         verbose=1,
@@ -44,7 +45,7 @@ def main():
     print("Training started — watch ep_rew_mean rise above the random baseline.")
     print("Random agent baseline: approx -430 total reward\n")
 
-    model.learn(total_timesteps=100_000)
+    model.learn(total_timesteps=3_000_000)
 
     # ── 5. Save ───────────────────────────────────────────────
     model.save("bloomward_ppo")

@@ -9,14 +9,14 @@
 # ============================================================
 
 import time
-from stable_baselines3 import PPO
+from sb3_contrib import MaskablePPO
 from bloomward_env.env import BloomwardEnv
 from bloomward_env.constants import SEASON_NAMES
 
 
 def main(render_mode="human", delay=0.4):
     print("Loading trained model...")
-    model = PPO.load("bloomward_ppo")
+    model = MaskablePPO.load("bloomward_ppo")
 
     env = BloomwardEnv(render_mode=render_mode)
     env.metadata["render_fps"] = 2
@@ -30,19 +30,17 @@ def main(render_mode="human", delay=0.4):
     print("\nWatching trained agent play...\n")
 
     for _ in range(300):
-        # deterministic=True means the agent always picks its best action
-        action, _ = model.predict(obs, deterministic=True)
+        action, _ = model.predict(obs, deterministic=True, action_masks=env.action_masks())
         obs, reward, terminated, truncated, info = env.step(int(action))
         total_reward += reward
         steps        += 1
-
         if render_mode == "human":
-            time.sleep(delay)   # pause so you can watch
-
+            time.sleep(delay)
         if terminated or truncated:
-            reason = info.get("reason", "unknown")
-            print(f"\nEpisode ended: {reason}")
+            print(f"\nEpisode ended: {info.get('reason', 'unknown')}")
             break
+    else:
+        info["reason"] = "truncated"
 
     env.render()
 

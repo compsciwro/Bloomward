@@ -30,7 +30,7 @@ from .constants import (
     SEASON_NAMES,
     SPREAD_EVERY_N_TURNS,
     REWARD_VALID_PLACEMENT, REWARD_INVALID_ACTION,
-    REWARD_COMBO, REWARD_WIN, REWARD_LOSS, REWARD_TURN_PENALTY,
+    REWARD_COMBO, REWARD_NEAR_COMBO, REWARD_LOSS, REWARD_TURN_PENALTY,
 )
 from .rules import (
     detect_combos, activate_spirit,
@@ -143,6 +143,17 @@ class BloomwardEnv(gym.Env):
         return obs, info
 
     # ------------------------------------------------------------------
+    # action_masks() — optional helper for training
+    # ------------------------------------------------------------------
+
+    # Action mask for potential use in training (not required by Gymnasium API)
+    def action_masks(self):
+        mask = np.zeros(self._n_tiles, dtype=bool)
+        for idx in self._board.placeable_indices():
+            mask[idx] = True
+        return mask
+
+    # ------------------------------------------------------------------
     # step()
     # ------------------------------------------------------------------
 
@@ -181,6 +192,7 @@ class BloomwardEnv(gym.Env):
         # ── Place the flower ──────────────────────────────────────────
         tile.flower    = self._current_flower
         placed_coord   = (tile.q, tile.r)
+        placed_flower  = self._current_flower
         reward        += float(REWARD_VALID_PLACEMENT)
 
         # ── Combo detection ───────────────────────────────────────────
@@ -191,6 +203,16 @@ class BloomwardEnv(gym.Env):
             last_placed_coord=placed_coord,
             activated_combos=self._activated_combos,
         )
+
+        # ── Proximity reward ──────────────────────────────────────────
+        if len(new_combos) == 0:
+            neighbors = self._board.get_neighbours_of(placed_coord[0], placed_coord[1])
+            matching_neighbors = [
+                n for n in neighbors
+                if n.flower == placed_flower
+            ]
+            if len(matching_neighbors) >= 1:
+                reward += float(REWARD_NEAR_COMBO)
 
         spirits_activated  = []
         self._skip_corruption = False   # reset Rain flag each step
