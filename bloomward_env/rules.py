@@ -233,17 +233,16 @@ def spread_rate_for_season(season: int) -> int:
 # 5. Win / loss / truncation
 # ============================================================
 
-def check_terminal(board: HexBoard, spirit_count: int,
+def check_terminal(board: HexBoard, spirit_count_p1: int, spirit_count_p2: int,
                    turn: int, max_turns: int):
     """
     Evaluate the episode terminal state.
-
     Returns
     -------
     (terminated: bool, truncated: bool, reason: str)
-
     reason values:
-      "win"                      — agent won
+      "win_p1"                   — Player 1 won
+      "win_p2"                   — Player 2 won
       "loss_sacred_core"         — corruption reached the Sacred Core
       "loss_no_valid_moves"      — no placeable tiles left
       "truncated_max_turns"      — turn limit reached
@@ -251,20 +250,18 @@ def check_terminal(board: HexBoard, spirit_count: int,
     """
     from .constants import WIN_SCORE_TARGET
 
-    # Loss: corruption reached the Sacred Core
     if board.sacred_core_corrupted():
         return True, False, "loss_sacred_core"
 
-    # Loss: no valid moves remain
     if len(board.placeable_indices()) == 0:
         return True, False, "loss_no_valid_moves"
 
-    # Win: enough spirits AND corruption under control
-    score = spirit_count * 10 - board.count_corrupted()
-    if score >= WIN_SCORE_TARGET:
-        return True, False, "win"
+    corrupt = board.count_corrupted()
+    if spirit_count_p1 * 10 - corrupt >= WIN_SCORE_TARGET:
+        return True, False, "win_p1"
+    if spirit_count_p2 * 10 - corrupt >= WIN_SCORE_TARGET:
+        return True, False, "win_p2"
 
-    # Truncation: max turns reached
     if turn >= max_turns:
         return False, True, "truncated_max_turns"
 

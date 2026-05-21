@@ -276,18 +276,21 @@ class BloomwardEnv(gym.Env):
         self._current_flower = self._draw_flower()
 
         terminated, truncated, reason = check_terminal(
-            self._board, self._spirit_count,
-            self._turn, self.max_turns,
+            self._board,
+            self._spirit_count_p1,
+            self._spirit_count_p2,
+            self._turn,
+            self.max_turns,
         )
 
+
         if terminated:
-            if reason == "win":
+            if reason == "win_p1":
                 reward += float(REWARD_WIN)
-                # Determine winner by per-player spirit count
-                if self._spirit_count_p1 >= self._spirit_count_p2:
-                    info["winner"] = 0
-                else:
-                    info["winner"] = 1
+                info["winner"] = 0
+            elif reason == "win_p2":
+                reward += float(REWARD_WIN)
+                info["winner"] = 1
             else:
                 reward += float(REWARD_LOSS)
                 info["winner"] = None
