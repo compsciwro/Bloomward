@@ -46,30 +46,30 @@ SEASON_NAMES  = {0: "Spring", 1: "Rain", 2: "Autumn", 3: "Winter"}
 
 # How many corrupt tiles spread per activation, by season
 SEASON_SPREAD_RATE = {
-    SEASON_SPRING: 2,
-    SEASON_RAIN:   2,
-    SEASON_AUTUMN: 4,
-    SEASON_WINTER: 3,
+    SEASON_SPRING: 1,
+    SEASON_RAIN:   1,
+    SEASON_AUTUMN: 2,
+    SEASON_WINTER: 2,
 }
 
 # Season advances every N turns
 TURNS_PER_SEASON = 4
 
 # Corruption spreads every N turns
-SPREAD_EVERY_N_TURNS = 3
+SPREAD_EVERY_N_TURNS = 8
 
 # --------------- Board -------------------------------------
-BOARD_RADIUS = 3   # radius 3 → 37 tiles total (3r²+3r+1)
+BOARD_RADIUS = 4  # radius 4 → 61   tiles total (3r²+3r+1)
 
 # --------------- Win / loss --------------------------------
-WIN_SPIRIT_COUNT = 8   # spirits needed to win
-WIN_MAX_CORRUPT  = 2   # max corrupted tiles allowed when winning
+WIN_SCORE_TARGET = 120
 MAX_TURNS        = 100 # episode truncation limit
 
 # --------------- Rewards (edit here to tune) ---------------
-REWARD_VALID_PLACEMENT = 1
-REWARD_INVALID_ACTION  = -5
-REWARD_COMBO           = 10
-REWARD_WIN             = 100
-REWARD_LOSS            = -100
-REWARD_TURN_PENALTY    = -1
+REWARD_VALID_PLACEMENT = 2
+REWARD_INVALID_ACTION  = -2
+REWARD_COMBO           = 50
+REWARD_NEAR_COMBO = 3
+REWARD_WIN             = 200
+REWARD_LOSS            = -50
+REWARD_TURN_PENALTY    = -0.1

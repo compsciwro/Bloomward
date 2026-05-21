@@ -1,22 +1,21 @@
-# Virtual environments
-venv/
-.venv/
-
-# Visual Studio / VS Code
+﻿# Visual Studio
 .vs/
-.vscode/
 
-# Python cache and test cache
+# Python
+venv/
 __pycache__/
 *.pyc
+*.pyo
 .pytest_cache/
 
-# Environment secrets
-.env
-
-# Training outputs
-logs/
+# Trained models
 *.zip
 
-# Jupyter checkpoints
-.ipynb_checkpoints/
+# Logs
+logs/
+
+# Environment files
+.env
+
+# Old training folder remnants
+/Training/

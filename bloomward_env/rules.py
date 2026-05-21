@@ -249,7 +249,7 @@ def check_terminal(board: HexBoard, spirit_count: int,
       "truncated_max_turns"      — turn limit reached
       "ongoing"                  — episode continues
     """
-    from .constants import WIN_SPIRIT_COUNT, WIN_MAX_CORRUPT
+    from .constants import WIN_SCORE_TARGET
 
     # Loss: corruption reached the Sacred Core
     if board.sacred_core_corrupted():
@@ -260,8 +260,8 @@ def check_terminal(board: HexBoard, spirit_count: int,
         return True, False, "loss_no_valid_moves"
 
     # Win: enough spirits AND corruption under control
-    corrupt_count = board.count_corrupted()
-    if spirit_count >= WIN_SPIRIT_COUNT and corrupt_count <= WIN_MAX_CORRUPT:
+    score = spirit_count * 10 - board.count_corrupted()
+    if score >= WIN_SCORE_TARGET:
         return True, False, "win"
 
     # Truncation: max turns reached
@@ -269,3 +269,75 @@ def check_terminal(board: HexBoard, spirit_count: int,
         return False, True, "truncated_max_turns"
 
     return False, False, "ongoing"
+
+# ============================================================
+# Spirit targeting and application for player-chosen targets (Renewal and Blossom)
+# ============================================================
+ 
+def get_spirit_targets(board: HexBoard, combo: dict) -> list:
+    """
+    Return valid target tile INDICES for a spirit that requires player input.
+ 
+    Spirit of Renewal (Sunflower) -> corrupted tiles adjacent to the combo tiles
+    Spirit of Blossom (Blossom)   -> empty fertile tiles adjacent to the combo tiles
+    Spirit of Rain    (Tulip)     -> empty list (auto-resolves, no targeting needed)
+    """
+    flower     = combo["flower"]
+    candidates = set()
+ 
+    if flower == FLOWER_SUNFLOWER:
+        for tile in combo["tiles"]:
+            for nbr in board.get_neighbours_of(tile.q, tile.r):
+                if nbr.corrupted:
+                    idx = board.index_of.get((nbr.q, nbr.r))
+                    if idx is not None:
+                        candidates.add(idx)
+ 
+    elif flower == FLOWER_BLOSSOM:
+        for tile in combo["tiles"]:
+            for nbr in board.get_neighbours_of(tile.q, tile.r):
+                if (nbr.tile_type == TILE_FERTILE
+                        and not nbr.corrupted
+                        and not nbr.protected
+                        and nbr.flower is None):
+                    idx = board.index_of.get((nbr.q, nbr.r))
+                    if idx is not None:
+                        candidates.add(idx)
+ 
+    return list(candidates)
+ 
+ 
+def apply_spirit_at_target(board: HexBoard, combo: dict, target_idx: int) -> dict:
+    """
+    Apply a Renewal or Blossom spirit to a player-chosen target tile.
+    Returns a result dict in the same format as activate_spirit().
+    """
+    flower      = combo["flower"]
+    spirit_name = SPIRIT_NAMES.get(flower, "Unknown Spirit")
+    result      = {"spirit": spirit_name, "flower": flower}
+ 
+    if flower == FLOWER_SUNFLOWER:
+        target   = board.tile_at_index(target_idx)
+        cleansed = None
+        if target and target.corrupted:
+            target.corrupted = False
+            target.tile_type = TILE_FERTILE
+            cleansed = (target.q, target.r)
+        result["cleansed_tile"] = cleansed
+ 
+    elif flower == FLOWER_BLOSSOM:
+        target    = board.tile_at_index(target_idx)
+        protected = []
+        if target and target.tile_type == TILE_FERTILE and not target.corrupted:
+            if not target.protected:
+                target.protected = True
+                protected.append((target.q, target.r))
+            for nbr in board.get_neighbours_of(target.q, target.r):
+                if (nbr.tile_type == TILE_FERTILE
+                        and not nbr.corrupted
+                        and not nbr.protected):
+                    nbr.protected = True
+                    protected.append((nbr.q, nbr.r))
+        result["protected_tiles"] = protected
+ 
+    return result
