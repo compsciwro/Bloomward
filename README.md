@@ -1,7 +1,7 @@
 <h1 align="center">🌸 Bloomward</h1>
 
 <p align="center">
-  <img src="logo.png" alt="Bloomward Logo" width="500"/>
+  <img src="https://github.com/compsciwro/Bloomward/blob/main/assets/logo_img.png?raw=true" alt="Bloomward Logo" width="500"/>
 </p>
 
 <p align="center">
