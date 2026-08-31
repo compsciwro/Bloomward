@@ -1,0 +1,152 @@
+
+Evaluating over 50 episodes each...
+
+Running random agent...
+  ep   1/50  steps=  33  reward=+384  loss_no_valid_moves
+  ep   2/50  steps=  32  reward=+91  loss_no_valid_moves
+  ep   3/50  steps=  34  reward=+483  loss_no_valid_moves
+  ep   4/50  steps=  32  reward=+285  loss_no_valid_moves
+  ep   5/50  steps=  35  reward=+529  loss_no_valid_moves
+  ep   6/50  steps=  32  reward=+147  loss_no_valid_moves
+  ep   7/50  steps=  35  reward=+538  loss_no_valid_moves
+  ep   8/50  steps=  33  reward=+384  loss_no_valid_moves
+  ep   9/50  steps=  30  reward=+1120  win_p1
+  ep  10/50  steps=  34  reward=+451  loss_no_valid_moves
+  ep  11/50  steps=  36  reward=+584  loss_no_valid_moves
+  ep  12/50  steps=  34  reward=+433  loss_no_valid_moves
+  ep  13/50  steps=  35  reward=+432  loss_no_valid_moves
+  ep  14/50  steps=  34  reward=+339  loss_no_valid_moves
+  ep  15/50  steps=  31  reward=+133  loss_no_valid_moves
+  ep  16/50  steps=  34  reward=+424  loss_no_valid_moves
+  ep  17/50  steps=  32  reward=+182  loss_no_valid_moves
+  ep  18/50  steps=  35  reward=+579  loss_no_valid_moves
+  ep  19/50  steps=  35  reward=+485  loss_no_valid_moves
+  ep  20/50  steps=  36  reward=+690  loss_no_valid_moves
+  ep  21/50  steps=  37  reward=+1083  win_p1
+  ep  22/50  steps=  34  reward=+386  loss_no_valid_moves
+  ep  23/50  steps=  32  reward=+238  loss_no_valid_moves
+  ep  24/50  steps=  33  reward=+434  loss_no_valid_moves
+  ep  25/50  steps=  32  reward=+235  loss_no_valid_moves
+  ep  26/50  steps=  35  reward=+397  loss_no_valid_moves
+  ep  27/50  steps=  33  reward=+437  loss_no_valid_moves
+  ep  28/50  steps=  34  reward=+424  loss_no_valid_moves
+  ep  29/50  steps=  34  reward=+433  loss_no_valid_moves
+  ep  30/50  steps=  33  reward=+325  loss_no_valid_moves
+  ep  31/50  steps=  35  reward=+347  loss_no_valid_moves
+  ep  32/50  steps=  32  reward=+141  loss_no_valid_moves
+  ep  33/50  steps=  38  reward=+706  loss_no_valid_moves
+  ep  34/50  steps=  36  reward=+784  loss_no_valid_moves
+  ep  35/50  steps=  34  reward=+383  loss_no_valid_moves
+  ep  36/50  steps=  34  reward=+492  loss_no_valid_moves
+  ep  37/50  steps=  35  reward=+438  loss_no_valid_moves
+  ep  38/50  steps=  35  reward=+438  loss_no_valid_moves
+  ep  39/50  steps=  36  reward=+637  loss_no_valid_moves
+  ep  40/50  steps=  36  reward=+652  loss_no_valid_moves
+  ep  41/50  steps=  34  reward=+383  loss_no_valid_moves
+  ep  42/50  steps=  31  reward=+130  loss_no_valid_moves
+  ep  43/50  steps=  31  reward=+227  loss_no_valid_moves
+  ep  44/50  steps=  34  reward=+377  loss_no_valid_moves
+  ep  45/50  steps=  35  reward=+482  loss_no_valid_moves
+  ep  46/50  steps=  33  reward=+431  loss_no_valid_moves
+  ep  47/50  steps=  33  reward=+387  loss_no_valid_moves
+  ep  48/50  steps=  32  reward=+179  loss_no_valid_moves
+  ep  49/50  steps=  33  reward=+234  loss_no_valid_moves
+  ep  50/50  steps=  33  reward=+243  loss_no_valid_moves
+
+==================================================
+  Random Agent  (50 episodes)
+==================================================
+  Avg total reward    : +423.4
+  Avg episode length  : 33.8 steps
+  Win rate            : 4.0%
+    - P1 win rate     : 4.0%
+    - P2 win rate     : 0.0%
+  Loss rate           : 96.0%
+  Truncation rate     : 0.0%
+  Avg invalid actions : 0.0
+  Avg spirits         : 4.68
+  Avg corrupted (end) : 28.8
+==================================================
+
+Loading trained PPO model...
+Running trained agent...
+  ep   1/50  steps=  44  reward=+819  loss_no_valid_moves
+  ep   2/50  steps=  35  reward=+942  win_p1
+  ep   3/50  steps=  39  reward=+1328  win_p1
+  ep   4/50  steps=  34  reward=+325  loss_no_valid_moves
+  ep   5/50  steps=  32  reward=+1104  win_p1
+  ep   6/50  steps=  41  reward=+1202  win_p1
+  ep   7/50  steps=  38  reward=+522  loss_no_valid_moves
+  ep   8/50  steps=  35  reward=+318  loss_no_valid_moves
+  ep   9/50  steps=  37  reward=+1276  win_p1
+  ep  10/50  steps=  40  reward=+681  loss_no_valid_moves
+  ep  11/50  steps=  40  reward=+811  loss_no_valid_moves
+  ep  12/50  steps=  31  reward=+1087  win_p1
+  ep  13/50  steps=  34  reward=+322  loss_no_valid_moves
+  ep  14/50  steps=  33  reward=+311  loss_no_valid_moves
+  ep  15/50  steps=  37  reward=+437  loss_no_valid_moves
+  ep  16/50  steps=  35  reward=+274  loss_no_valid_moves
+  ep  17/50  steps=  38  reward=+504  loss_no_valid_moves
+  ep  18/50  steps=  37  reward=+1058  win_p1
+  ep  19/50  steps=  40  reward=+666  loss_no_valid_moves
+  ep  20/50  steps=  43  reward=+1208  win_p1
+  ep  21/50  steps=  33  reward=+258  loss_no_valid_moves
+  ep  22/50  steps=  33  reward=+443  loss_no_valid_moves
+  ep  23/50  steps=  31  reward=+286  loss_no_valid_moves
+  ep  24/50  steps=  38  reward=+501  loss_no_valid_moves
+  ep  25/50  steps=  32  reward=+194  loss_no_valid_moves
+  ep  26/50  steps=  46  reward=+1332  win_p1
+  ep  27/50  steps=  36  reward=+1257  win_p1
+  ep  28/50  steps=  37  reward=+481  loss_no_valid_moves
+  ep  29/50  steps=  32  reward=+921  win_p1
+  ep  30/50  steps=  35  reward=+1048  win_p1
+  ep  31/50  steps=  40  reward=+625  loss_no_valid_moves
+  ep  32/50  steps=  34  reward=+413  loss_no_valid_moves
+  ep  33/50  steps=  40  reward=+625  loss_no_valid_moves
+  ep  34/50  steps=  34  reward=+263  loss_no_valid_moves
+  ep  35/50  steps=  34  reward=+360  loss_no_valid_moves
+  ep  36/50  steps=  31  reward=+127  loss_no_valid_moves
+  ep  37/50  steps=  21  reward=+1036  win_p1
+  ep  38/50  steps=  35  reward=+427  loss_no_valid_moves
+  ep  39/50  steps=  40  reward=+1197  win_p1
+  ep  40/50  steps=  42  reward=+741  loss_no_valid_moves
+  ep  41/50  steps=  37  reward=+1064  win_p1
+  ep  42/50  steps=  37  reward=+449  loss_no_valid_moves
+  ep  43/50  steps=  34  reward=+513  loss_no_valid_moves
+  ep  44/50  steps=  33  reward=+249  loss_no_valid_moves
+  ep  45/50  steps=  35  reward=+377  loss_no_valid_moves
+  ep  46/50  steps=  33  reward=+155  loss_no_valid_moves
+  ep  47/50  steps=  40  reward=+631  loss_no_valid_moves
+  ep  48/50  steps=  38  reward=+710  loss_no_valid_moves
+  ep  49/50  steps=  37  reward=+496  loss_no_valid_moves
+  ep  50/50  steps=  33  reward=+402  loss_no_valid_moves
+
+==================================================
+  Trained PPO Agent  (50 episodes)
+==================================================
+  Avg total reward    : +655.4
+  Avg episode length  : 36.1 steps
+  Win rate            : 30.0%
+    - P1 win rate     : 30.0%
+    - P2 win rate     : 0.0%
+  Loss rate           : 70.0%
+  Truncation rate     : 0.0%
+  Avg invalid actions : 0.0
+  Avg spirits         : 5.90
+  Avg corrupted (end) : 25.7
+==================================================
+
+==================================================
+  Improvement Summary
+==================================================
+  Random avg reward  : +423.4
+  Trained avg reward : +655.4
+  Improvement        : +232.1
+  Random win rate    : 4.0%
+  Trained win rate   : 30.0%
+  Invalid reduction  : 0.0 → 0.0
+==================================================
+
+
+Results saved to: results/eval_20260831_132300.txt
+

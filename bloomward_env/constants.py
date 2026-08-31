@@ -62,7 +62,7 @@ SPREAD_EVERY_N_TURNS = 8
 BOARD_RADIUS = 4  # radius 4 → 61   tiles total (3r²+3r+1)
 
 # --------------- Win / loss --------------------------------
-WIN_SCORE_TARGET = 120
+WIN_SCORE_TARGET = 60
 MAX_TURNS        = 100 # episode truncation limit
 
 # --------------- Rewards (edit here to tune) ---------------
@@ -73,3 +73,5 @@ REWARD_NEAR_COMBO = 3
 REWARD_WIN             = 200
 REWARD_LOSS            = -50
 REWARD_TURN_PENALTY    = -0.1
+REWARD_CLEANSE           = 15
+REWARD_CORRUPTION_SPREAD = -3

@@ -17,6 +17,7 @@ from .constants import (
     REWARD_VALID_PLACEMENT, REWARD_INVALID_ACTION,
     REWARD_COMBO, REWARD_NEAR_COMBO,
     REWARD_WIN, REWARD_LOSS, REWARD_TURN_PENALTY,
+    REWARD_CLEANSE, REWARD_CORRUPTION_SPREAD,
     WIN_SCORE_TARGET,
 )
 from .rules import (
@@ -239,6 +240,8 @@ class BloomwardEnv(gym.Env):
             self._board, pending["combo"], target_idx
         )
         info.setdefault("spirits_activated", []).append(spirit_result)
+        if spirit_result.get("cleansed_tile") is not None:
+            reward += float(REWARD_CLEANSE)
         info["spirit_resolved"] = True
         info["invalid_action"]  = False
 
@@ -269,6 +272,9 @@ class BloomwardEnv(gym.Env):
                 newly_corrupted = spread_corruption(
                     self._board, spread_n, self.np_random
                 )
+                if newly_corrupted:
+                    reward += float(REWARD_CORRUPTION_SPREAD) * len(newly_corrupted)
+                
 
         info["corruption_spread"] = newly_corrupted
         info["season"]            = get_season(self._turn)
