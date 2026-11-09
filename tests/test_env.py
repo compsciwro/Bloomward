@@ -12,9 +12,22 @@ import random
 from bloomward_env.env import BloomwardEnv
 from bloomward_env.board import HexBoard, hex_distance
 from bloomward_env.rules import (
-    detect_combos, spread_corruption, _all_triangles
+    detect_combos, spread_corruption, _triangles_containing
 )
-from bloomward_env.constants import TILE_FERTILE, TILE_CORRUPT, TILE_SACRED
+from bloomward_env.constants import (
+    BOARD_RADIUS, TILE_FERTILE, TILE_CORRUPT, TILE_SACRED
+)
+
+
+def all_triangles(board):
+    """Every unit triangle on the board, each listed once."""
+    seen = set()
+    for tile in board.tiles:
+        for tri in _triangles_containing(board, tile.q, tile.r):
+            key = frozenset((t.q, t.r) for t in tri)
+            if key not in seen:
+                seen.add(key)
+                yield tri
 
 
 # ============================================================
@@ -73,23 +86,25 @@ class TestGymnasiumAPI:
 class TestBoardConstruction:
 
     def test_tile_count(self):
-        board = HexBoard(radius=3)
-        assert board.num_tiles() == 37
+        board = HexBoard()
+        # radius 4 board: 3r^2 + 3r + 1 = 61 tiles
+        assert board.radius == BOARD_RADIUS
+        assert board.num_tiles() == 3 * BOARD_RADIUS ** 2 + 3 * BOARD_RADIUS + 1
 
     def test_exactly_one_sacred_core(self):
-        board  = HexBoard(radius=3)
+        board  = HexBoard()
         sacred = [t for t in board.tiles if t.tile_type == TILE_SACRED]
         assert len(sacred) == 1
         assert sacred[0].q == 0 and sacred[0].r == 0
 
     def test_outer_ring_corrupt(self):
-        board = HexBoard(radius=3)
+        board = HexBoard()
         outer = [t for t in board.tiles
                  if hex_distance(0, 0, t.q, t.r) == board.radius]
         assert all(t.tile_type == TILE_CORRUPT for t in outer)
 
     def test_inner_ring_fertile(self):
-        board = HexBoard(radius=3)
+        board = HexBoard()
         inner = [t for t in board.tiles
                  if 0 < hex_distance(0, 0, t.q, t.r) < board.radius]
         assert all(t.tile_type == TILE_FERTILE for t in inner)
@@ -105,7 +120,7 @@ class TestPlacement:
         placeable = env._board.placeable_indices()
         assert len(placeable) > 0
         _, reward, _, _, info = env.step(placeable[0])
-        # +1 placement -1 turn penalty = 0.0 minimum
+        # +2 placement -0.1 turn penalty, so at least +1.9
         assert reward >= 0
         assert not info["invalid_action"]
 
@@ -133,40 +148,42 @@ class TestPlacement:
 class TestComboDetection:
 
     def test_no_combo_fresh_board(self):
-        board = HexBoard(radius=3)
+        board = HexBoard()
         assert detect_combos(board) == []
 
     def test_triangle_combo_detected(self):
-        board = HexBoard(radius=3)
-        for a, b, c in _all_triangles(board):
+        board = HexBoard()
+        for a, b, c in all_triangles(board):
             if all(t.tile_type == TILE_FERTILE for t in [a, b, c]):
                 a.flower = b.flower = c.flower = 1
                 break
-        combos = detect_combos(board)
+        combos = detect_combos(board, last_placed_coord=(a.q, a.r))
         assert len(combos) >= 1
         assert combos[0]["flower"] == 1
 
     def test_no_combo_mismatched_flowers(self):
-        board = HexBoard(radius=3)
-        for a, b, c in _all_triangles(board):
+        board = HexBoard()
+        for a, b, c in all_triangles(board):
             if all(t.tile_type == TILE_FERTILE for t in [a, b, c]):
                 a.flower, b.flower, c.flower = 1, 2, 3
                 break
-        assert detect_combos(board) == []
+        assert detect_combos(board, last_placed_coord=(a.q, a.r)) == []
 
     def test_combo_not_double_counted(self):
         """Same triangle should not activate twice."""
-        board            = HexBoard(radius=3)
+        board            = HexBoard()
         activated_combos = set()
-        for a, b, c in _all_triangles(board):
+        for a, b, c in all_triangles(board):
             if all(t.tile_type == TILE_FERTILE for t in [a, b, c]):
                 a.flower = b.flower = c.flower = 2
                 break
-        first  = detect_combos(board, activated_combos=activated_combos)
+        first  = detect_combos(board, last_placed_coord=(a.q, a.r),
+                               activated_combos=activated_combos)
         assert len(first) >= 1
         for combo in first:
             activated_combos.add(combo["key"])
-        second = detect_combos(board, activated_combos=activated_combos)
+        second = detect_combos(board, last_placed_coord=(a.q, a.r),
+                               activated_combos=activated_combos)
         assert second == []
 
 
@@ -177,14 +194,14 @@ class TestComboDetection:
 class TestCorruption:
 
     def test_corruption_spreads_inward(self):
-        board = HexBoard(radius=3)
+        board = HexBoard()
         rng   = np.random.default_rng(0)
         before = board.count_corrupted()
         spread_corruption(board, n_tiles=2, np_random=rng)
         assert board.count_corrupted() > before
 
     def test_corruption_cannot_overwrite_flower(self):
-        board = HexBoard(radius=3)
+        board = HexBoard()
         rng   = np.random.default_rng(7)
         for tile in board.tiles:
             if tile.is_placeable():
@@ -196,7 +213,7 @@ class TestCorruption:
         assert board.count_corrupted() == before
 
     def test_sacred_core_not_corrupted_by_spread(self):
-        board = HexBoard(radius=3)
+        board = HexBoard()
         rng   = np.random.default_rng(99)
         for _ in range(30):
             spread_corruption(board, n_tiles=4, np_random=rng)
