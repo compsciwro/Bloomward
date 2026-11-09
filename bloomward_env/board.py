@@ -8,10 +8,10 @@
 #   Six neighbours of (q, r) use the direction vectors below.
 #   Hex distance = max(|dq|, |dr|, |dq+dr|).
 #
-# Board zones (radius = 3, 37 tiles total):
+# Board zones (radius = 4, 61 tiles total):
 #   distance 0          → Sacred Core (1 tile)
-#   distance 1–2        → Fertile Soil (18 tiles)
-#   distance == radius  → Corrupt Soil (18 tiles)
+#   distance 1–3        → Fertile Soil (36 tiles)
+#   distance == radius  → Corrupt Soil (24 tiles)
 # ============================================================
 
 from .constants import (
