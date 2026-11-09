@@ -1,0 +1,11 @@
+run_id,agent,reward_tag,seed,reason,win,score,spirits,corrupted,turns,steps,invalid_actions,reward
+20261109_125822,maskppo,smoke,50000,loss_no_valid_moves,0,57,8,23,37,45,0,872.3
+20261109_125822,maskppo,smoke,50001,loss_no_valid_moves,0,14,4,26,34,38,0,464.6
+20261109_125822,maskppo,smoke,50002,loss_no_valid_moves,0,36,6,24,36,42,0,675.4
+20261109_125822,maskppo,smoke,50003,loss_no_valid_moves,0,23,5,27,33,36,0,451.7
+20261109_125822,maskppo,smoke,50004,loss_no_valid_moves,0,13,4,27,33,36,0,413.7
+20261109_130855,maskppo,smoke,50000,loss_no_valid_moves,0,57,8,23,37,45,0,872.3
+20261109_130855,maskppo,smoke,50001,loss_no_valid_moves,0,14,4,26,34,38,0,464.6
+20261109_130855,maskppo,smoke,50002,loss_no_valid_moves,0,36,6,24,36,42,0,675.4
+20261109_130855,maskppo,smoke,50003,loss_no_valid_moves,0,23,5,27,33,36,0,451.7
+20261109_130855,maskppo,smoke,50004,loss_no_valid_moves,0,13,4,27,33,36,0,413.7

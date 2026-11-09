@@ -18,11 +18,20 @@ except ImportError:
     ENV_OK = False
     print("[game_screen] BloomwardEnv not found - running in demo mode.")
 
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "bloomward_ppo.zip")
+
 try:
     from sb3_contrib import MaskablePPO
-    AGENT, AGENT_OK = None, False   # skip until retrained
+    if os.path.exists(MODEL_PATH):
+        AGENT = MaskablePPO.load(MODEL_PATH)
+        AGENT_OK = True
+        print(f"[game_screen] Trained agent loaded from {MODEL_PATH}")
+    else:
+        AGENT, AGENT_OK = None, False
+        print(f"[game_screen] NO MODEL at {MODEL_PATH} - agent is RANDOM.")
 except ImportError:
     AGENT, AGENT_OK = None, False
+    print("[game_screen] sb3-contrib missing - agent is RANDOM.")
 
 # ── Colours ───────────────────────────────────────────────────────────────────
 C_STATUS_BG  = (45, 90, 35)
@@ -324,8 +333,9 @@ class GameScreen:
                 if idx is not None:
                     self._do_step(idx, "You", 0)
 
-    # ── Agent ─────────────────────────────────────────────────────────────────
+        # ── Agent ─────────────────────────────────────────────────────────────────
     def _handle_agent(self):
+        # Spirit targeting phase
         if self._targeting:
             if not self._agent_waiting:
                 self._agent_waiting = True
@@ -334,13 +344,25 @@ class GameScreen:
             if pygame.time.get_ticks() - self._agent_tick < self.TARGET_DELAY_MS:
                 return
             self._agent_waiting = False
-            if self._valid_target_idxs:
+
+            if not self._valid_target_idxs:
                 self._targeting = False
-                self._do_step(int(np.random.choice(list(self._valid_target_idxs))), "Agent", 1)
+                return
+
+            masks = self.env.action_masks()
+            if AGENT_OK and AGENT is not None:
+                action = int(AGENT.predict(self.obs, deterministic=True,
+                                           action_masks=masks)[0])
+                if not masks[action]:
+                    action = int(np.random.choice(list(self._valid_target_idxs)))
             else:
-                self._targeting = False
+                action = int(np.random.choice(list(self._valid_target_idxs)))
+
+            self._targeting = False
+            self._do_step(action, "Agent", 1)
             return
 
+        # Placement phase
         if not self._agent_waiting:
             self._agent_waiting = True
             self._agent_tick = pygame.time.get_ticks()
@@ -353,21 +375,38 @@ class GameScreen:
             self.turn_count += 1
             return
 
+        masks = self.env.action_masks()
+        if not masks.any():
+            self._log("Agent has no valid moves.")
+            self.turn_count += 1
+            return
+
         if AGENT_OK and AGENT is not None:
-            masks  = self.env.action_masks() if hasattr(self.env, "action_masks") else None
-            action = int(AGENT.predict(self.obs, deterministic=True, action_masks=masks)[0])
+            action = int(AGENT.predict(self.obs, deterministic=True,
+                                       action_masks=masks)[0])
+            if not masks[action]:
+                action = int(np.random.choice(np.where(masks)[0]))
         else:
-            valid  = np.where(self.env.action_masks())[0] if hasattr(self.env, "action_masks") else np.where(self.board == 0)[0]
-            action = int(np.random.choice(valid)) if len(valid) else 0
+            action = int(np.random.choice(np.where(masks)[0]))
 
         self._do_step(action, "Agent", 1)
 
     # ── Step ──────────────────────────────────────────────────────────────────
-    def _do_step(self, action, label, player):
+    def _do_step(self, action, label, player, _retry=0):
         if self.env is not None:
             obs, reward, terminated, truncated, info = self.env.step(action, player=player)
             self.obs  = obs
             self.info = info
+
+            if info.get("invalid_action"):
+                self._log(f"{label} -> INVALID tile {action}")
+                if player == 1 and _retry < 5:
+                    m     = self.env.action_masks()
+                    valid = np.where(m)[0]
+                    valid = valid[valid != action]
+                    if len(valid):
+                        self._do_step(int(np.random.choice(valid)), label, player, _retry + 1)
+                return
 
             if info.get("spirit_pending"):
                 self._targeting            = True
@@ -403,14 +442,20 @@ class GameScreen:
         self.game_over = True
         reason = info.get("reason", "?")
         winner = info.get("winner", None)
-        if winner is None and reason == "win":
+
+        if reason == "win_p1":
+            winner = 0
+        elif reason == "win_p2":
+            winner = 1
+        elif reason == "win" and winner is None:
             winner = 0 if self.spirits_p1 >= self.spirits_p2 else 1
+
         sp1, sp2 = self._get_sp1(), self._get_sp2()
-        if reason == "win":
-            if winner == 0:
-                self.result_msg = f"You Win!  (Your spirits: {sp1}  Agent spirits: {sp2})  Press R to play again."
-            else:
-                self.result_msg = f"Agent Wins!  (Agent spirits: {sp2}  Your spirits: {sp1})  Press R to play again."
+
+        if winner == 0:
+            self.result_msg = f"You Win!  (Your spirits: {sp1}  Agent spirits: {sp2})  Press R to play again."
+        elif winner == 1:
+            self.result_msg = f"Agent Wins!  (Agent spirits: {sp2}  Your spirits: {sp1})  Press R to play again."
         elif reason == "loss_sacred_core":
             self.result_msg = "The Sacred Tree has fallen. Everyone loses.  Press R to play again."
         else:
