@@ -152,6 +152,14 @@ Planned next steps include:
 
 ---
 
+## Credits
+Background music: "Fairy Dance" by thesunchild0
+https://freesound.org/people/thesunchild0/sounds/792201/
+Licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/).
+Converted from M4A to OGG for use in Pygame.
+
+---
+
 ## 💖 Notes
 
 Bloomward is currently being developed for academic and research purposes.  
