@@ -1,0 +1,7 @@
+model,opponent,seat,games,win_rate,win_ci_low,win_ci_high,opp_win_rate,garden_lost_rate,avg_score_diff,agent_spirits,opp_spirits,corrupted,turns,invalid,combo_take_rate,gift_chance
+bloomward_v2_450000_steps.zip,random,P1,200,87.0,81.63,90.97,0.0,13.0,73.5,8.82,1.48,24.75,27.2,0.0,98.66,63.68
+bloomward_v2_450000_steps.zip,random,P2,200,93.5,89.2,96.16,0.0,6.5,77.05,8.98,1.28,23.77,26.45,0.0,98.19,67.49
+bloomward_v2_450000_steps.zip,combo,P1,200,52.5,45.6,59.31,39.5,8.0,1.0,7.57,7.46,21.63,25.04,0.0,98.5,60.79
+bloomward_v2_450000_steps.zip,combo,P2,200,43.0,36.33,49.93,46.5,10.5,0.7,7.53,7.46,21.43,25.25,0.0,98.92,62.63
+bloomward_v2_450000_steps.zip,cautious,P1,200,35.5,29.2,42.35,40.5,24.0,-4.05,6.84,7.25,22.07,27.17,0.0,99.04,53.75
+bloomward_v2_450000_steps.zip,cautious,P2,200,36.0,29.67,42.86,39.5,24.5,-4.2,6.66,7.08,21.97,27.23,0.0,98.85,55.07

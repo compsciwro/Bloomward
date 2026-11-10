@@ -31,6 +31,13 @@ def main():
     pygame.display.set_caption("Bloomward")
     clock = pygame.time.Clock()
 
+    # ── Background music ──────────────────────────────────────────────────────
+    music_path = os.path.join(ASSETS_DIR, "background_music.ogg")
+    if os.path.exists(music_path):
+        pygame.mixer.music.load(music_path)
+        pygame.mixer.music.set_volume(0.35)     # 0.0 = silent, 1.0 = full volume
+        pygame.mixer.music.play(-1)             # -1 = loop forever
+
     # ── Shared assets ─────────────────────────────────────────────────────────
     assets = {
         # Backgrounds

@@ -23,7 +23,7 @@ except ImportError:
     ENV_OK = False
     print("[game_screen] BloomwardEnv not found - running in demo mode.")
 
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "bloomward_ppo.zip")
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "models", "v2", "bloomward_v2_100000_steps.zip")
 
 try:
     from sb3_contrib import MaskablePPO
@@ -37,6 +37,12 @@ try:
 except ImportError:
     AGENT, AGENT_OK = None, False
     print("[game_screen] sb3-contrib missing - agent is RANDOM.")
+
+# v2 agents use the per-tile inputs from agent_features.py; the original agent
+# uses the environment's own observation. Detected from the loaded model.
+AGENT_IS_V2 = AGENT_OK and "tiles" in AGENT.observation_space.spaces
+if AGENT_IS_V2:
+    from agent_features import build_obs
 
 # ── Colours ───────────────────────────────────────────────────────────────────
 C_STATUS_BG  = (45, 90, 35)
@@ -103,8 +109,11 @@ FLOWER_FILE = {0: "flower_sunflower.png", 1: "flower_tulip.png", 2: "flower_blos
 TREE_FILE   = "sacred_tree.png"
 GRASS_FILE  = "fertile_grass.png"
 VICTORY_CARD_FILE = "victory_card.png"
+AGENT_WINS_CARD_FILE = "agent_wins_card.png"
+GAME_OVER_CARD_FILE  = "game_over_card.png"
 PLAY_AGAIN_FILE   = "btnplayagain.png"
 HOME_BTN_FILE     = "btnhomescreen.png"
+OVER_MSG_UP, OVER_COUNTS_DOWN = 0.030, 0.012   # Game Over: text offsets as a share of card height
 VICTORY_DIM_ALPHA = 165            # ~65% black over the finished board
 GRAVEL_FILE = "corrupted_gravel.png"
 TREE_SCALE  = 1.0   # Sacred Tree tile size relative to a normal tile
@@ -244,6 +253,7 @@ class GameScreen:
     def _load_victory_art(self):
         """Victory card and its two buttons, scaled once and positioned relative to the card."""
         self.victory = None
+        self.end_cards = {}                # end-game panels: "win", "agent", "over"
         self.fx_ui = EffectsManager()
         self._ui_spark = 0.0
         card = self._load_img(VICTORY_CARD_FILE)
@@ -273,16 +283,39 @@ class GameScreen:
             "home": button(home, 0.79),
             "score_y": rect.y + int(ch * 0.548),  # just below the twig ornaments
             "font": pygame.font.SysFont("Georgia", max(18, int(ch * 0.04)), bold=True),
+            "font_sm": pygame.font.SysFont("Georgia", max(15, int(ch * 0.032)), bold=True),
             "dim": None,
         }
         dim = pygame.Surface((self.sw, self.sh), pygame.SRCALPHA)
         dim.fill((0, 0, 0, VICTORY_DIM_ALPHA))
         self.victory["dim"] = dim
+
+        # Agent Wins and Game Over panels: same size, position, buttons and dimming as You Win
+        self.end_cards["win"] = card
+        for kind, name in (("agent", AGENT_WINS_CARD_FILE), ("over", GAME_OVER_CARD_FILE)):
+            img = self._load_img(name)
+            if img:
+                img = img.subsurface(img.get_bounding_rect(min_alpha=40)).copy()
+                w = int(img.get_width() * ch / img.get_height())      # same height, own proportions
+                self.end_cards[kind] = pygame.transform.smoothscale(img, (w, ch))
         self.fx_ui = EffectsManager()           # sparkles drawn above the card
         self._ui_spark = 0.0
 
+    def _end_kind(self):
+        """Which end-game panel fits the result: "win", "agent", "over", or None."""
+        if not self.game_over:
+            return None
+        if self.winner == 0:
+            return "win"
+        if self.winner == 1:
+            return "agent"
+        if self.end_reason == "loss_no_valid_moves":
+            return "over"
+        return None                      # other endings keep the plain text overlay
+
     def _victory_showing(self):
-        return self.game_over and self.winner == 0 and self.victory is not None
+        """True when an end-game panel (You Win, Agent Wins or Game Over) is on screen."""
+        return self.victory is not None and self._end_kind() in self.end_cards
 
     def _hex_texture(self, name):
         """Load a hex-shaped tile image, crop it to the hexagon, scale it to the
@@ -381,6 +414,7 @@ class GameScreen:
             self.info = {}
 
         self.winner               = None
+        self.end_reason           = None
         if getattr(self, "fx_ui", None):
             self.fx_ui.clear()
         self.round_num            = 1
@@ -513,7 +547,7 @@ class GameScreen:
         self.fx.tree_fireflies(dt, cx, cy - 8, HEX_SIZE * 1.1, HEX_SIZE * 0.7)
         for idx in [i for i, t in self._blooms.items() if now - t > BLOOM_TIME * 1000]:
             del self._blooms[idx]
-        if self._victory_showing():
+        if self._victory_showing() and self.winner == 0:      # sparkles only on You Win
             self.fx_ui.update(dt)
             self._ui_spark -= dt
             if self._ui_spark <= 0:
@@ -591,6 +625,10 @@ class GameScreen:
                     self._do_step(idx, "You", 0)
 
         # ── Agent ─────────────────────────────────────────────────────────────────
+    def _agent_obs(self):
+        """What the agent sees: v2 inputs from its own seat (Player 2), or the original observation."""
+        return build_obs(self.env, 1) if AGENT_IS_V2 else self.obs
+
     def _handle_agent(self):
         # Spirit targeting phase
         if self._targeting:
@@ -608,7 +646,7 @@ class GameScreen:
 
             masks = self.env.action_masks()
             if AGENT_OK and AGENT is not None:
-                action = int(AGENT.predict(self.obs, deterministic=True,
+                action = int(AGENT.predict(self._agent_obs(), deterministic=True,
                                            action_masks=masks)[0])
                 if not masks[action]:
                     action = int(np.random.choice(list(self._valid_target_idxs)))
@@ -639,7 +677,7 @@ class GameScreen:
             return
 
         if AGENT_OK and AGENT is not None:
-            action = int(AGENT.predict(self.obs, deterministic=True,
+            action = int(AGENT.predict(self._agent_obs(), deterministic=True,
                                        action_masks=masks)[0])
             if not masks[action]:
                 action = int(np.random.choice(np.where(masks)[0]))
@@ -760,6 +798,7 @@ class GameScreen:
 
         sp1, sp2 = self._get_sp1(), self._get_sp2()
         self.winner = winner
+        self.end_reason = reason
         if winner == 0 and self.victory:
             self._victory_burst()
 
@@ -806,7 +845,9 @@ class GameScreen:
     def _draw_victory(self):
         v = self.victory
         self.screen.blit(v["dim"], (0, 0))
-        self.screen.blit(v["card"], v["rect"])
+        kind = self._end_kind()
+        card = self.end_cards[kind]
+        self.screen.blit(card, card.get_rect(center=v["rect"].center))
 
         # Final spirit counts from the game state (same values as the score panel)
         f, brown = v["font"], (75, 40, 18)
@@ -815,6 +856,10 @@ class GameScreen:
         gap = int(v["rect"].w * 0.07)
         y = v["score_y"]
         cx = v["rect"].centerx
+        if kind == "over":                                # reason first, counts just below it
+            msg = v["font_sm"].render("No valid moves remain", True, brown)
+            self.screen.blit(msg, msg.get_rect(center=(cx, y - int(v["rect"].h * OVER_MSG_UP))))
+            y += int(v["rect"].h * OVER_COUNTS_DOWN)
         self.screen.blit(left, left.get_rect(midright=(cx - gap // 2, y)))
         self.screen.blit(right, right.get_rect(midleft=(cx + gap // 2, y)))
         d = max(4, gap // 7)                              # small diamond between the counts
